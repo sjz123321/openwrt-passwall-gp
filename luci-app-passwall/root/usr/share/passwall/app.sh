@@ -23,6 +23,7 @@ UTIL_SS=$LUA_UTIL_PATH/util_shadowsocks.lua
 UTIL_XRAY=$LUA_UTIL_PATH/util_xray.lua
 UTIL_TROJAN=$LUA_UTIL_PATH/util_trojan.lua
 UTIL_NAIVE=$LUA_UTIL_PATH/util_naiveproxy.lua
+UTIL_GOPROXY=$LUA_UTIL_PATH/util_goproxy.lua
 UTIL_HYSTERIA2=$LUA_UTIL_PATH/util_hysteria2.lua
 UTIL_TUIC=$LUA_UTIL_PATH/util_tuic.lua
 
@@ -411,6 +412,30 @@ run_ipt2socks() {
 	ln_run "$(first_type ipt2socks)" "ipt2socks_${flag}" $log_file -l $local_port -b 0.0.0.0 -s $socks_address -p $socks_port ${_extra_param}
 }
 
+run_goproxy() {
+	local flag node run_type local_addr local_port server_host server_port dns_listen_port dns_socks_address dns_socks_port log_file
+	local _extra_param=""
+	eval_set_val $@
+	[ -n "$node" ] || return 1
+	[ -n "$log_file" ] || log_file="/dev/null"
+	[ -n "$run_type" ] || run_type="socks"
+	[ -n "$local_addr" ] || local_addr="127.0.0.1"
+	[ -n "$server_host" ] || server_host=$(config_n_get $node address)
+	[ -n "$server_port" ] || server_port=$(config_n_get $node port)
+
+	if [ "$run_type" = "dns" ]; then
+		local _dns_forward=$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')
+		[ -n "$dns_socks_address" ] || dns_socks_address="127.0.0.1"
+		[ -n "$dns_socks_port" ] || dns_socks_port=$tcp_node_socks_port
+		_extra_param="$(lua $UTIL_GOPROXY gen_args -node $node -run_type dns -local_addr 127.0.0.1 -local_port $dns_listen_port -server_host $dns_socks_address -server_port $dns_socks_port -dns_server ${_dns_forward})"
+	else
+		_extra_param="$(lua $UTIL_GOPROXY gen_args -node $node -run_type $run_type -local_addr $local_addr -local_port $local_port -server_host $server_host -server_port $server_port)"
+	fi
+
+	[ -n "$_extra_param" ] || return 1
+	ln_run "$(first_type $(config_t_get global_app goproxy_file) proxy)" "proxy_${flag:-goproxy}" "$log_file" $_extra_param
+}
+
 run_singbox() {
 	local flag type node tcp_redir_port tcp_proxy_way udp_redir_port socks_address socks_port socks_username socks_password http_address http_port http_username http_password
 	local dns_listen_port direct_dns_query_strategy direct_dns_port direct_dns_udp_server direct_dns_tcp_server direct_dns_dot_server remote_dns_protocol remote_dns_udp_server remote_dns_tcp_server remote_dns_doh remote_dns_client_ip remote_fakedns remote_dns_query_strategy dns_cache dns_socks_address dns_socks_port
@@ -681,6 +706,13 @@ run_socks() {
 		lua $UTIL_NAIVE gen_config -node $node -run_type socks -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $port > $config_file
 		ln_run "$(first_type naive)" naive $log_file "$config_file"
 	;;
+	goproxy)
+		run_goproxy flag=$flag node=$node run_type=socks local_addr=$bind local_port=$socks_port server_host=$server_host server_port=$port log_file=$log_file
+		[ "$http_port" != "0" ] && {
+			http_flag=1
+			run_goproxy flag="${flag}_HTTP" node=$node run_type=http local_addr=$bind local_port=$http_port server_host=$server_host server_port=$port log_file=/dev/null
+		}
+	;;
 	ssr)
 		lua $UTIL_SS gen_config -node $node -local_addr $bind -local_port $socks_port -server_host $server_host -server_port $port > $config_file
 		ln_run "$(first_type ssr-local)" "ssr-local" $log_file -c "$config_file" -v -u
@@ -785,6 +817,9 @@ run_redir() {
 		;;
 		naiveproxy)
 			echolog "Naiveproxy不支持UDP转发！"
+		;;
+		goproxy)
+			echolog "Goproxy does not support Passwall UDP redir in this integration."
 		;;
 		ssr)
 			lua $UTIL_SS gen_config -node $node -local_addr "0.0.0.0" -local_port $local_port > $config_file
@@ -995,6 +1030,16 @@ run_redir() {
 		naiveproxy)
 			lua $UTIL_NAIVE gen_config -node $node -run_type redir -local_addr "0.0.0.0" -local_port $local_port > $config_file
 			ln_run "$(first_type naive)" naive $log_file "$config_file"
+		;;
+		goproxy)
+			[ "${TCP_PROXY_WAY}" = "tproxy" ] && {
+				echolog "Goproxy only supports redirect mode here, fallback to local Socks forwarding."
+				_socks_flag=1
+				_socks_address=127.0.0.1
+				_socks_port=$tcp_node_socks_port
+			} || {
+				run_goproxy flag=TCP node=$node run_type=redir local_addr="0.0.0.0" local_port=$local_port server_host=$server_host server_port=$port log_file=$log_file
+			}
 		;;
 		ssr)
 			[ "${TCP_PROXY_WAY}" = "tproxy" ] && lua_tproxy_arg="-tcp_tproxy true"
@@ -1408,6 +1453,12 @@ start_dns() {
 	[ -n "${NO_PLUGIN_DNS}" ] && TUN_DNS="127.0.0.1#${resolve_dns_port}"
 
 	case "$DNS_MODE" in
+	goproxy)
+		TCP_PROXY_DNS=1
+		local dns_forward=$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')
+		run_goproxy flag=DNS node=$TCP_NODE run_type=dns dns_listen_port=${NEXT_DNS_LISTEN_PORT} dns_socks_address=127.0.0.1 dns_socks_port=${tcp_node_socks_port} log_file=/dev/null
+		echolog "  - Goproxy DNS(${TUN_DNS}) -> ${TCP_SOCKS_server} -> tcp://${dns_forward}"
+	;;
 	dns2socks)
 		local dns2socks_socks_server=$(echo $(config_t_get global socks_server 127.0.0.1:1080) | sed "s/#/:/g")
 		local dns2socks_forward=$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')
@@ -2152,7 +2203,7 @@ get_config() {
 	FILTER_PROXY_IPV6=$(config_t_get global filter_proxy_ipv6 0)
 	DNS_REDIRECT=$(config_t_get global dns_redirect 1)
 
-	REDIRECT_LIST="socks ss ss-rust ssr sing-box xray trojan-plus naiveproxy hysteria2"
+	REDIRECT_LIST="socks ss ss-rust ssr sing-box xray trojan-plus naiveproxy goproxy hysteria2"
 	TPROXY_LIST="socks ss ss-rust ssr sing-box xray trojan-plus hysteria2"
 
 	NEXT_DNS_LISTEN_PORT=15353

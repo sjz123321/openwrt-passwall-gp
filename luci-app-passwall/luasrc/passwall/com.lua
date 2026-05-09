@@ -56,6 +56,21 @@ _M.xray = {
 	}
 }
 
+_M.goproxy = {
+	name = "Goproxy",
+	repo = "snail007/goproxy",
+	get_url = gh_release_url,
+	cmd_version = "version 2>/dev/null | awk 'NR==1 {print $NF}'",
+	zipped = true,
+	zipped_suffix = "tar.gz",
+	default_path = "/usr/bin/proxy",
+	match_fmt_str = "linux%%-%s",
+	file_tree = {
+		x86_64 = "amd64",
+		mips64el = "mips64le"
+	}
+}
+
 _M["chinadns-ng"] = {
 	name = "ChinaDNS-NG",
 	repo = "zfl9/chinadns-ng",

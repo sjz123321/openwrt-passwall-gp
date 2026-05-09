@@ -80,6 +80,7 @@ config global_rules
 config global_app
 	option singbox_file '/usr/bin/sing-box'
 	option xray_file '/usr/bin/xray'
+	option goproxy_file '/usr/bin/proxy'
 	option hysteria_file '/usr/bin/hysteria'
 	option chinadns_ng '/usr/bin/chinadns-ng'
 

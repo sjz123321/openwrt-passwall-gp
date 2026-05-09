@@ -4,6 +4,7 @@ local datatypes = api.datatypes
 local fs = api.fs
 local has_singbox = api.finded_com("singbox")
 local has_xray = api.finded_com("xray")
+local has_goproxy = api.finded_com("goproxy") or api.is_finded("proxy")
 local has_gfwlist = fs.access("/usr/share/passwall/rules/gfwlist")
 local has_chnlist = fs.access("/usr/share/passwall/rules/chnlist")
 local has_chnroute = fs.access("/usr/share/passwall/rules/chnroute")
@@ -382,6 +383,9 @@ end
 if has_xray then
 	o:value("xray", "Xray")
 end
+if has_goproxy then
+	o:value("goproxy", "Goproxy")
+end
 if api.is_finded("smartdns") then
 	o:depends({ dns_shunt = "smartdns",  ['!reverse'] = true })
 end
@@ -493,6 +497,7 @@ o:value("149.112.112.112", "149.112.112.112 (Quad9)")
 o:value("208.67.220.220", "208.67.220.220 (OpenDNS)")
 o:value("208.67.222.222", "208.67.222.222 (OpenDNS)")
 o:depends({dns_mode = "dns2socks"})
+o:depends({dns_mode = "goproxy"})
 o:depends({dns_mode = "tcp"})
 o:depends({dns_mode = "udp"})
 o:depends({xray_dns_mode = "tcp"})
