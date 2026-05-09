@@ -20,17 +20,45 @@ local function bracket_ipv6(host)
 	return host
 end
 
-local function parent_url(node, server_host, server_port)
+local function parent_parts(node, server_host, server_port)
 	local protocol = trim(node.goproxy_protocol or "socks5")
 	local username = trim(node.goproxy_username or node.username)
 	local password = trim(node.goproxy_password or node.password)
-	local auth = ""
+	local service = "socks"
+	local transport = "tcp"
+	local tls_single = false
 
-	if username ~= "" and password ~= "" then
-		auth = username .. ":" .. password .. "@"
+	if protocol == "http" then
+		service = "http"
+	elseif protocol == "https" then
+		service = "http"
+		transport = "tls"
+		tls_single = true
+	elseif protocol == "socks5s" then
+		service = "socks"
+		transport = "tls"
+		tls_single = true
+	elseif protocol == "httpws" then
+		service = "http"
+		transport = "ws"
+	elseif protocol == "httpwss" then
+		service = "http"
+		transport = "wss"
+	elseif protocol == "socks5ws" then
+		service = "socks"
+		transport = "ws"
+	elseif protocol == "socks5wss" then
+		service = "socks"
+		transport = "wss"
 	end
 
-	return protocol .. "://" .. auth .. bracket_ipv6(server_host) .. ":" .. server_port
+	return {
+		service = service,
+		transport = transport,
+		address = bracket_ipv6(server_host) .. ":" .. server_port,
+		auth = (username ~= "" and password ~= "") and (username .. ":" .. password) or "",
+		tls_single = tls_single
+	}
 end
 
 function gen_args(var)
@@ -66,12 +94,22 @@ function gen_args(var)
 		return table.concat(args, " ")
 	end
 
+	local parent = parent_parts(node, server_host, server_port)
 	local args = {
 		"sps",
-		"-P", quote(parent_url(node, server_host, server_port)),
+		"-S", parent.service,
+		"-T", parent.transport,
+		"-P", quote(parent.address),
 		"-t", "tcp",
 		"-p", quote(local_addr .. ":" .. local_port)
 	}
+	if parent.auth ~= "" then
+		args[#args + 1] = "-A"
+		args[#args + 1] = quote(parent.auth)
+	end
+	if parent.tls_single then
+		args[#args + 1] = "--parent-tls-single"
+	end
 
 	if run_type == "redir" then
 		args[#args + 1] = "--redir"
