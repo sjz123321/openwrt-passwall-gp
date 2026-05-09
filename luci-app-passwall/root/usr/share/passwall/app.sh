@@ -413,7 +413,7 @@ run_ipt2socks() {
 }
 
 run_goproxy() {
-	local flag node run_type local_addr local_port server_host server_port dns_listen_port dns_socks_address dns_socks_port log_file
+	local flag node run_type local_addr local_port server_host server_port dns_listen_port dns_socks_address dns_socks_port dns_server log_file
 	local _extra_param=""
 	eval_set_val $@
 	[ -n "$node" ] || return 1
@@ -424,7 +424,7 @@ run_goproxy() {
 	[ -n "$server_port" ] || server_port=$(config_n_get $node port)
 
 	if [ "$run_type" = "dns" ]; then
-		local _dns_forward=$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')
+		local _dns_forward=${dns_server:-$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')}
 		[ -n "$dns_socks_address" ] || dns_socks_address="127.0.0.1"
 		[ -n "$dns_socks_port" ] || dns_socks_port=$tcp_node_socks_port
 		_extra_param="$(lua $UTIL_GOPROXY gen_args -node $node -run_type dns -local_addr 127.0.0.1 -local_port $dns_listen_port -server_host $dns_socks_address -server_port $dns_socks_port -dns_server ${_dns_forward})"
@@ -1456,7 +1456,7 @@ start_dns() {
 	goproxy)
 		TCP_PROXY_DNS=1
 		local dns_forward=$(get_first_dns REMOTE_DNS 53 | sed 's/#/:/g')
-		run_goproxy flag=DNS node=$TCP_NODE run_type=dns dns_listen_port=${NEXT_DNS_LISTEN_PORT} dns_socks_address=127.0.0.1 dns_socks_port=${tcp_node_socks_port} log_file=/dev/null
+		run_goproxy flag=DNS node=$TCP_NODE run_type=dns dns_listen_port=${NEXT_DNS_LISTEN_PORT} dns_socks_address=127.0.0.1 dns_socks_port=${tcp_node_socks_port} dns_server=${dns_forward} log_file=/dev/null
 		echolog "  - Goproxy DNS(${TUN_DNS}) -> ${TCP_SOCKS_server} -> tcp://${dns_forward}"
 	;;
 	dns2socks)
