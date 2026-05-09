@@ -51,13 +51,19 @@ function gen_args(var)
 	end
 
 	if run_type == "dns" then
-		return table.concat({
+		local dns_server = trim(var["-dns_server"])
+		local args = {
 			"dns",
 			"-S", "socks",
 			"-T", "tcp",
 			"-P", quote(bracket_ipv6(server_host) .. ":" .. server_port),
 			"-p", quote(local_addr .. ":" .. local_port)
-		}, " ")
+		}
+		if dns_server ~= "" then
+			args[#args + 1] = "-q"
+			args[#args + 1] = quote(dns_server)
+		end
+		return table.concat(args, " ")
 	end
 
 	local args = {
