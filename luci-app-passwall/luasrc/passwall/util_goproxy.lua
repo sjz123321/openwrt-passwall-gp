@@ -7,11 +7,6 @@ local function trim(value)
 	return value and tostring(value):gsub("^%s+", ""):gsub("%s+$", "") or ""
 end
 
-local function quote(value)
-	value = trim(value)
-	return "'" .. value:gsub("'", "'\\''") .. "'"
-end
-
 local function bracket_ipv6(host)
 	host = trim(host)
 	if api.is_ipv6(host) and host:sub(1, 1) ~= "[" then
@@ -84,12 +79,12 @@ function gen_args(var)
 			"dns",
 			"-S", "socks",
 			"-T", "tcp",
-			"-P", quote(bracket_ipv6(server_host) .. ":" .. server_port),
-			"-p", quote(local_addr .. ":" .. local_port)
+			"-P", bracket_ipv6(server_host) .. ":" .. server_port,
+			"-p", local_addr .. ":" .. local_port
 		}
 		if dns_server ~= "" then
 			args[#args + 1] = "-q"
-			args[#args + 1] = quote(dns_server)
+			args[#args + 1] = dns_server
 		end
 		return table.concat(args, " ")
 	end
@@ -99,13 +94,13 @@ function gen_args(var)
 		"sps",
 		"-S", parent.service,
 		"-T", parent.transport,
-		"-P", quote(parent.address),
+		"-P", parent.address,
 		"-t", "tcp",
-		"-p", quote(local_addr .. ":" .. local_port)
+		"-p", local_addr .. ":" .. local_port
 	}
 	if parent.auth ~= "" then
 		args[#args + 1] = "-A"
-		args[#args + 1] = quote(parent.auth)
+		args[#args + 1] = parent.auth
 	end
 	if parent.tls_single then
 		args[#args + 1] = "--parent-tls-single"
