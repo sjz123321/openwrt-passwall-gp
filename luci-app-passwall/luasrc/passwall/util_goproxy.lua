@@ -83,8 +83,8 @@ function gen_args(var)
 			"-p", local_addr .. ":" .. local_port
 		}
 		if dns_server ~= "" then
-			args[#args + 1] = "-q"
-			args[#args + 1] = dns_server
+			table.insert(args, "-q")
+			table.insert(args, dns_server)
 		end
 		return table.concat(args, " ")
 	end
@@ -99,19 +99,19 @@ function gen_args(var)
 		"-p", local_addr .. ":" .. local_port
 	}
 	if parent.auth ~= "" then
-		args[#args + 1] = "-A"
-		args[#args + 1] = parent.auth
+		table.insert(args, "-A")
+		table.insert(args, parent.auth)
 	end
 	if parent.tls_single then
-		args[#args + 1] = "--parent-tls-single"
+		table.insert(args, "--parent-tls-single")
 	end
 
 	if run_type == "redir" then
-		args[#args + 1] = "--redir"
+		table.insert(args, "--redir")
 	elseif run_type == "socks" then
-		args[#args + 1] = "--disable-http"
+		table.insert(args, "--disable-http")
 	elseif run_type == "http" then
-		args[#args + 1] = "--disable-socks"
+		table.insert(args, "--disable-socks")
 	end
 
 	return table.concat(args, " ")
