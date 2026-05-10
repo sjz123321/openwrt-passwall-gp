@@ -55,9 +55,11 @@ local function parent_parts(node, server_host, server_port)
 	elseif protocol == "httpkcp" then
 		service = "http"
 		transport = "kcp"
+		allow_auth = false
 	elseif protocol == "socks5kcp" then
 		service = "socks"
 		transport = "kcp"
+		allow_auth = false
 	end
 
 	return {

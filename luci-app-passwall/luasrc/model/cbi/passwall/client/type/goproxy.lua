@@ -39,8 +39,6 @@ o:depends({ [_n("protocol")] = "http" })
 o:depends({ [_n("protocol")] = "https" })
 o:depends({ [_n("protocol")] = "socks5" })
 o:depends({ [_n("protocol")] = "socks5s" })
-o:depends({ [_n("protocol")] = "httpkcp" })
-o:depends({ [_n("protocol")] = "socks5kcp" })
 
 o = s:option(Value, _n("password"), translate("Password"))
 o.password = true
@@ -48,8 +46,6 @@ o:depends({ [_n("protocol")] = "http" })
 o:depends({ [_n("protocol")] = "https" })
 o:depends({ [_n("protocol")] = "socks5" })
 o:depends({ [_n("protocol")] = "socks5s" })
-o:depends({ [_n("protocol")] = "httpkcp" })
-o:depends({ [_n("protocol")] = "socks5kcp" })
 
 o = s:option(Value, _n("ws_password"), "WS Password")
 o.password = true
