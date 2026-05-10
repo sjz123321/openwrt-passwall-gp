@@ -24,6 +24,8 @@ o:value("httpws", "HTTP WS")
 o:value("httpwss", "HTTP WSS")
 o:value("socks5ws", "SOCKS5 WS")
 o:value("socks5wss", "SOCKS5 WSS")
+o:value("httpkcp", "HTTP KCP")
+o:value("socks5kcp", "SOCKS5 KCP")
 o.default = "socks5"
 
 o = s:option(Value, _n("address"), translate("Address (Support Domain Name)"))
@@ -32,8 +34,36 @@ o = s:option(Value, _n("port"), translate("Port"))
 o.datatype = "port"
 
 o = s:option(Value, _n("username"), translate("Username"))
+o:depends({ [_n("protocol")] = "http" })
+o:depends({ [_n("protocol")] = "https" })
+o:depends({ [_n("protocol")] = "socks5" })
+o:depends({ [_n("protocol")] = "socks5s" })
+o:depends({ [_n("protocol")] = "httpkcp" })
+o:depends({ [_n("protocol")] = "socks5kcp" })
 
 o = s:option(Value, _n("password"), translate("Password"))
 o.password = true
+o:depends({ [_n("protocol")] = "http" })
+o:depends({ [_n("protocol")] = "https" })
+o:depends({ [_n("protocol")] = "socks5" })
+o:depends({ [_n("protocol")] = "socks5s" })
+o:depends({ [_n("protocol")] = "httpkcp" })
+o:depends({ [_n("protocol")] = "socks5kcp" })
+
+o = s:option(Value, _n("ws_password"), "WS Password")
+o.password = true
+o:depends({ [_n("protocol")] = "httpws" })
+o:depends({ [_n("protocol")] = "httpwss" })
+o:depends({ [_n("protocol")] = "socks5ws" })
+o:depends({ [_n("protocol")] = "socks5wss" })
+
+o = s:option(Value, _n("kcp_password"), "KCP Password")
+o.password = true
+o:depends({ [_n("protocol")] = "httpkcp" })
+o:depends({ [_n("protocol")] = "socks5kcp" })
+
+o = s:option(Value, _n("custom_args"), "Custom Command Args")
+o.description = "Example: proxy http -T tcp -P {ipaddr}:{port} -t tcp -p :{local_port}"
+o.placeholder = "proxy http -T tcp -P {ipaddr}:{port} -t tcp -p :{local_port}"
 
 api.luci_types(arg[1], m, s, type_name, option_prefix)

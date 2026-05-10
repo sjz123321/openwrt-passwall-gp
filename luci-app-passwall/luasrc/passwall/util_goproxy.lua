@@ -16,12 +16,15 @@ local function bracket_ipv6(host)
 end
 
 local function parent_parts(node, server_host, server_port)
-	local protocol = trim(node.goproxy_protocol or "socks5")
-	local username = trim(node.goproxy_username or node.username)
-	local password = trim(node.goproxy_password or node.password)
+	local protocol = trim(node.protocol or "socks5")
+	local username = trim(node.username)
+	local password = trim(node.password)
+	local ws_password = trim(node.ws_password)
+	local kcp_password = trim(node.kcp_password)
 	local service = "socks"
 	local transport = "tcp"
 	local tls_single = false
+	local allow_auth = true
 
 	if protocol == "http" then
 		service = "http"
@@ -36,24 +39,61 @@ local function parent_parts(node, server_host, server_port)
 	elseif protocol == "httpws" then
 		service = "http"
 		transport = "ws"
+		allow_auth = false
 	elseif protocol == "httpwss" then
 		service = "http"
 		transport = "wss"
+		allow_auth = false
 	elseif protocol == "socks5ws" then
 		service = "socks"
 		transport = "ws"
+		allow_auth = false
 	elseif protocol == "socks5wss" then
 		service = "socks"
 		transport = "wss"
+		allow_auth = false
+	elseif protocol == "httpkcp" then
+		service = "http"
+		transport = "kcp"
+	elseif protocol == "socks5kcp" then
+		service = "socks"
+		transport = "kcp"
 	end
 
 	return {
 		service = service,
 		transport = transport,
 		address = bracket_ipv6(server_host) .. ":" .. server_port,
-		auth = (username ~= "" and password ~= "") and (username .. ":" .. password) or "",
-		tls_single = tls_single
+		auth = (allow_auth and username ~= "" and password ~= "") and (username .. ":" .. password) or "",
+		tls_single = tls_single,
+		ws_password = ws_password,
+		kcp_password = kcp_password
 	}
+end
+
+local function custom_args(node, run_type, local_addr, local_port, server_host, server_port)
+	local template = trim(node.custom_args)
+	if template == "" then
+		return nil
+	end
+
+	local parent = parent_parts(node, server_host, server_port)
+	local values = {
+		ipaddr = bracket_ipv6(server_host),
+		port = server_port,
+		local_addr = local_addr,
+		local_port = local_port,
+		parent_service = parent.service,
+		parent_type = parent.transport,
+		run_type = run_type
+	}
+
+	template = template:gsub("^%s*%S*proxy%s+", "")
+	template = template:gsub("{([%w_]+)}", function(key)
+		return values[key] or ""
+	end)
+
+	return trim(template)
 end
 
 function gen_args(var)
@@ -89,6 +129,11 @@ function gen_args(var)
 		return table.concat(args, " ")
 	end
 
+	local custom = custom_args(node, run_type, local_addr, local_port, server_host, server_port)
+	if custom then
+		return custom
+	end
+
 	local parent = parent_parts(node, server_host, server_port)
 	local args = {
 		"sps",
@@ -104,6 +149,14 @@ function gen_args(var)
 	end
 	if parent.tls_single then
 		table.insert(args, "--parent-tls-single")
+	end
+	if (parent.transport == "ws" or parent.transport == "wss") and parent.ws_password ~= "" then
+		table.insert(args, "--parent-ws-password")
+		table.insert(args, parent.ws_password)
+	end
+	if parent.transport == "kcp" and parent.kcp_password ~= "" then
+		table.insert(args, "--kcp-key")
+		table.insert(args, parent.kcp_password)
 	end
 
 	if run_type == "redir" then
