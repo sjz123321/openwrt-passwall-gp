@@ -245,7 +245,7 @@ function index_status()
 	end
 
 	e.haproxy_status = luci.sys.call(string.format("/bin/busybox top -bn1 | grep -v grep | grep '%s/bin/' | grep haproxy >/dev/null", appname)) == 0
-	e["tcp_node_status"] = luci.sys.call("/bin/busybox top -bn1 | grep -v 'grep' | grep '/tmp/etc/passwall/bin/' | grep 'default' | grep 'TCP' >/dev/null") == 0
+	e["tcp_node_status"] = luci.sys.call("(/bin/busybox top -bn1 | grep -v 'grep' | grep '/tmp/etc/passwall/bin/' | grep 'default' | grep 'TCP' >/dev/null) || (/bin/busybox top -bn1 | grep -v 'grep' | grep '/tmp/etc/passwall/bin/proxy_TCP' >/dev/null)") == 0
 
 	if (uci:get(appname, "@global[0]", "udp_node") or "nil") == "tcp" then
 		e["udp_node_status"] = e["tcp_node_status"]
