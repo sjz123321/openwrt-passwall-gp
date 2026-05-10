@@ -84,17 +84,12 @@ define Build/Prepare
 		exit 1; \
 	fi
 	@set -e; \
-	VERSION="$$(wget -qO- https://api.github.com/repos/snail007/goproxy/releases/latest | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"; \
-	if [ -z "$$VERSION" ]; then \
-		echo "Unable to resolve latest goproxy release version"; \
-		exit 1; \
-	fi; \
 	FILE="proxy-linux-$(GOPROXY_RELEASE_ARCH).tar.gz"; \
 	case "$$FILE" in *_commercial*) \
 		echo "Refusing to download commercial goproxy release asset: $$FILE"; \
 		exit 1; \
 	esac; \
-	URL="https://github.com/snail007/goproxy/releases/download/$$VERSION/$$FILE"; \
+	URL="https://github.com/snail007/goproxy/releases/latest/download/$$FILE"; \
 	echo "Downloading $$URL"; \
 	wget -O "$(PKG_BUILD_DIR)/$$FILE" "$$URL"; \
 	tar -xzf "$(PKG_BUILD_DIR)/$$FILE" -C "$(PKG_BUILD_DIR)"; \
