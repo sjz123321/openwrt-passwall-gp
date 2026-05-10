@@ -7,7 +7,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-passwall
 PKG_VERSION:=25.1.8
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_$(PKG_NAME)_Iptables_Transparent_Proxy \
@@ -34,10 +34,21 @@ PKG_CONFIG_DEPENDS:= \
 
 LUCI_TITLE:=LuCI support for PassWall
 LUCI_PKGARCH:=all
+PKGARCH:=$(LUCI_PKGARCH)
 LUCI_DEPENDS:=+coreutils +coreutils-base64 +coreutils-nohup +curl \
 	+chinadns-ng +dns2socks +dnsmasq-full +ip-full \
-	+libuci-lua +lua +luci-compat +luci-lib-jsonc \
+	+libuci-lua +lua +luci-compat +luci-lib-jsonc +luci-lua-runtime \
 	+microsocks +resolveip +tcping
+
+include $(INCLUDE_DIR)/package.mk
+
+define Package/$(PKG_NAME)
+  SECTION:=luci
+  CATEGORY:=LuCI
+  SUBMENU:=3. Applications
+  TITLE:=$(LUCI_TITLE)
+  DEPENDS:=$(LUCI_DEPENDS)
+endef
 
 define Package/$(PKG_NAME)/config
 menu "Configuration"
@@ -193,6 +204,42 @@ rm -f $${IPKG_INSTROOT}/usr/share/passwall/rules/*.nft
 exit 0
 endef
 
-include $(TOPDIR)/feeds/luci/luci.mk
+define Build/Prepare
+	rm -rf $(PKG_BUILD_DIR)
+	$(INSTALL_DIR) $(PKG_BUILD_DIR)
+	for d in luasrc htdocs root; do \
+		if [ -d "$(CURDIR)/$${d}" ]; then \
+			$(INSTALL_DIR) "$(PKG_BUILD_DIR)/$${d}"; \
+			$(CP) "$(CURDIR)/$${d}/." "$(PKG_BUILD_DIR)/$${d}/"; \
+		fi; \
+	done
+endef
+
+define Build/Configure
+endef
+
+define Build/Compile
+endef
+
+define Package/$(PKG_NAME)/install
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci
+	$(CP) $(PKG_BUILD_DIR)/luasrc/. $(1)/usr/lib/lua/luci/
+	$(INSTALL_DIR) $(1)/www
+	$(CP) $(PKG_BUILD_DIR)/htdocs/. $(1)/www/
+	$(INSTALL_DIR) $(1)/
+	$(CP) $(PKG_BUILD_DIR)/root/. $(1)/
+endef
+
+define Package/$(PKG_NAME)/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || {
+	rm -f /tmp/luci-indexcache.*
+	rm -rf /tmp/luci-modulecache/
+	killall -HUP rpcd 2>/dev/null
+	exit 0
+}
+endef
+
+$(eval $(call BuildPackage,$(PKG_NAME)))
 
 # call BuildPackage - OpenWrt buildroot signature
