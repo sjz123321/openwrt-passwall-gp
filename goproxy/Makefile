@@ -55,6 +55,8 @@ else ifeq ($(ARCH),mips64el)
   endif
 endif
 
+GOPROXY_SOURCE:=proxy-linux-$(GOPROXY_RELEASE_ARCH).tar.gz
+
 define Package/goproxy
   SECTION:=net
   CATEGORY:=Network
@@ -83,16 +85,13 @@ define Build/Prepare
 		echo "Unsupported goproxy architecture: $(ARCH)"; \
 		exit 1; \
 	fi
-	@set -e; \
-	FILE="proxy-linux-$(GOPROXY_RELEASE_ARCH).tar.gz"; \
-	case "$$FILE" in *_commercial*) \
-		echo "Refusing to download commercial goproxy release asset: $$FILE"; \
+	@case "$(GOPROXY_SOURCE)" in *_commercial*) \
+		echo "Refusing to download commercial goproxy release asset: $(GOPROXY_SOURCE)"; \
 		exit 1; \
-	esac; \
-	URL="https://github.com/snail007/goproxy/releases/latest/download/$$FILE"; \
-	echo "Downloading $$URL"; \
-	wget -O "$(PKG_BUILD_DIR)/$$FILE" "$$URL"; \
-	tar -xzf "$(PKG_BUILD_DIR)/$$FILE" -C "$(PKG_BUILD_DIR)"; \
+	esac
+	@echo "Downloading https://github.com/snail007/goproxy/releases/latest/download/$(GOPROXY_SOURCE)"
+	wget -O "$(PKG_BUILD_DIR)/$(GOPROXY_SOURCE)" "https://github.com/snail007/goproxy/releases/latest/download/$(GOPROXY_SOURCE)"
+	tar -xzf "$(PKG_BUILD_DIR)/$(GOPROXY_SOURCE)" -C "$(PKG_BUILD_DIR)"
 	test -f "$(PKG_BUILD_DIR)/proxy"
 endef
 
