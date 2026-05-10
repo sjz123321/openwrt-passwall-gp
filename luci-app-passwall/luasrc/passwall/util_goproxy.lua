@@ -108,6 +108,7 @@ function gen_args(var)
 	local local_port = trim(var["-local_port"])
 	local server_host = trim(var["-server_host"] or node.address)
 	local server_port = trim(var["-server_port"] or node.port)
+	local protocol = trim(node.protocol or "socks5")
 
 	if local_port == "" or server_host == "" or server_port == "" then
 		return ""
@@ -129,9 +130,8 @@ function gen_args(var)
 		return table.concat(args, " ")
 	end
 
-	local custom = custom_args(node, run_type, local_addr, local_port, server_host, server_port)
-	if custom then
-		return custom
+	if protocol == "custom" then
+		return custom_args(node, run_type, local_addr, local_port, server_host, server_port) or ""
 	end
 
 	local parent = parent_parts(node, server_host, server_port)
